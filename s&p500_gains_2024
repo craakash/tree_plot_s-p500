@@ -1,0 +1,60 @@
+import yfinance as yf
+import pandas as pd
+import plotly.express as px
+
+# Fetch the S&P 500 ticker symbols
+sp500_url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+sp500_table = pd.read_html(sp500_url)[0]
+sp500_tickers = sp500_table['Symbol'].tolist()
+
+# Fetch stock data for the year 2024
+start_date = "2024-01-01"
+end_date = "2024-12-20"
+
+# Placeholder for storing percentage gains
+gains_data = []
+
+# Fetch data for each ticker (limited to first 50 to prevent API overload)
+for ticker in sp500_tickers[:500]:  # Adjust this limit as needed
+    try:
+        stock_data = yf.download(ticker, start=start_date, end=end_date)
+        if not stock_data.empty:
+            start_price = stock_data['Adj Close'].iloc[0]
+            end_price = stock_data['Adj Close'].iloc[-1]
+            percent_gain = ((end_price - start_price) / start_price) * 100
+            gains_data.append({'Ticker': ticker, 'Gain': percent_gain})
+    except Exception as e:
+        print(f"Error fetching data for {ticker}: {e}")
+
+# Create a DataFrame
+gains_df = pd.DataFrame(gains_data)
+
+
+# Create a DataFrame
+gains_df = pd.DataFrame(gains_data)
+
+# Add a formatted column for display
+gains_df['Formatted Gain'] = gains_df['Gain'].apply(lambda x: f"{x:.2f}%")
+
+# Create a treemap using Plotly
+fig = px.treemap(
+    gains_df,
+    path=['Ticker'],
+    values='Gain',
+    color='Gain',
+    color_continuous_scale='Turbo',  # Use Turbo color scale for better visualization
+    title="S&P 500 Stocks % Gain in 2024 ",
+    hover_data={'Formatted Gain': True, 'Gain': False}  # Show formatted gain on hover
+)
+
+# Customize the layout for a bigger plot
+fig.update_layout(
+    width=1200,  # Width of the plot
+    height=800,  # Height of the plot
+    font=dict(size=14),  # Font size for better readability
+    margin=dict(t=50, l=25, r=25, b=25)  # Adjust margins
+)
+
+# Update traces to use the formatted gain as text
+fig.update_traces(textinfo="label+text", text=gains_df['Formatted Gain'])
+fig.show()
